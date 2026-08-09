@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "appId": "c95e3b03-7a56-418f-ab4d-3c4cec3dab2b",
+  "appDisplayName": "Legal System",
+  "region": "prod",
+  "environmentId": "9ce6fb09-5b63-e9f4-9185-b707b4b3425e",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "stages": {
+          "entitySetName": "crb32_stageses",
+          "logicalName": "crb32_stages"
+        },
+        "updates": {
+          "entitySetName": "crb32_updateses",
+          "logicalName": "crb32_updates"
+        },
+        "users": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser"
+        },
+        "cases": {
+          "entitySetName": "crb32_caseses",
+          "logicalName": "crb32_cases"
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}
