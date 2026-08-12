@@ -1,10 +1,18 @@
-import type { ReactNode } from 'react';
-import { makeStyles, tokens, Text, Avatar } from '@fluentui/react-components';
-import { ScalesRegular, DocumentBulletListRegular } from '@fluentui/react-icons';
-import { palette } from '../../theme';
+import { useState, type ReactNode } from 'react';
+import { makeStyles, tokens, Text, Avatar, Tooltip } from '@fluentui/react-components';
+import {
+  ScalesRegular,
+  DocumentBulletListRegular,
+  ChevronRightRegular,
+  ChevronLeftRegular,
+} from '@fluentui/react-icons';
+import { palette, radius, shadow, motion } from '../../theme';
 import { useAppContext } from '../../hooks/useAppContext';
+import { useT } from '../../i18n';
 
-const SIDEBAR_WIDTH = 232;
+const SIDEBAR_WIDTH = 240;
+const SIDEBAR_WIDTH_COLLAPSED = 76;
+const SIDEBAR_COLLAPSED_KEY = 'diwan.sidebarCollapsed';
 
 const useStyles = makeStyles({
   shell: {
@@ -15,51 +23,91 @@ const useStyles = makeStyles({
   sidebar: {
     width: `${SIDEBAR_WIDTH}px`,
     flexShrink: 0,
-    backgroundImage: palette.gradientGreen,
-    color: palette.black[100],
+    backgroundImage: palette.gradientInk,
+    color: palette.textOnDark,
     display: 'flex',
     flexDirection: 'column',
     position: 'sticky',
     top: 0,
     height: '100vh',
-    boxShadow: '2px 0 16px rgba(31, 42, 32, 0.18)',
+    boxShadow: shadow.lg,
     zIndex: 1,
+    transitionProperty: 'width',
+    transitionDuration: motion.base,
+    overflow: 'hidden',
+  },
+  sidebarCollapsed: {
+    width: `${SIDEBAR_WIDTH_COLLAPSED}px`,
   },
   brand: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
     padding: '24px 20px 20px',
-    borderBottom: '1px solid rgba(255,255,255,0.10)',
+    borderBlockEndWidth: '1px',
+    borderBlockEndStyle: 'solid',
+    borderBlockEndColor: 'rgba(255,255,255,0.10)',
     marginBottom: '4px',
+  },
+  brandCollapsed: {
+    justifyContent: 'center',
+    padding: '24px 0 20px',
   },
   iconBadge: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '38px',
-    height: '38px',
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundImage: palette.gradientGold,
-    color: palette.green[900],
+    width: '40px',
+    height: '40px',
+    borderRadius: radius.md,
+    backgroundImage: palette.gradientBrass,
+    color: palette.ink[900],
     flexShrink: 0,
-    boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
   },
   titles: {
     display: 'flex',
     flexDirection: 'column',
-    lineHeight: 1.25,
+    lineHeight: 1.3,
     minWidth: 0,
   },
   title: {
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: 700,
-    color: palette.black[100],
+    color: palette.textOnDark,
     whiteSpace: 'nowrap',
   },
   subtitle: {
     fontSize: '11px',
-    color: palette.green[200],
+    color: palette.ink[200],
+    whiteSpace: 'nowrap',
+  },
+  toggleBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    padding: '10px 0',
+    color: palette.ink[200],
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    flexShrink: 0,
+    borderBlockStartWidth: '1px',
+    borderBlockStartStyle: 'solid',
+    borderBlockStartColor: 'rgba(255,255,255,0.10)',
+    transitionProperty: 'background-color, color',
+    transitionDuration: motion.fast,
+    ':hover': {
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      color: palette.textOnDark,
+    },
+  },
+  toggleIcon: {
+    transitionProperty: 'transform',
+    transitionDuration: motion.base,
+  },
+  toggleIconCollapsed: {
+    transform: 'rotate(180deg)',
   },
   nav: {
     display: 'flex',
@@ -73,24 +121,34 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: '10px',
     padding: '10px 13px',
-    borderRadius: tokens.borderRadiusMedium,
+    borderRadius: radius.md,
     fontSize: '13px',
     fontWeight: 600,
-    color: palette.green[100],
-    borderLeft: '3px solid transparent',
+    color: palette.ink[200],
+    borderInlineStartWidth: '3px',
+    borderInlineStartStyle: 'solid',
+    borderInlineStartColor: 'transparent',
     cursor: 'pointer',
-    transition: 'background-color 0.15s ease, color 0.15s ease',
+    transitionProperty: 'background-color, color',
+    transitionDuration: motion.fast,
+    whiteSpace: 'nowrap',
     ':hover': {
       backgroundColor: 'rgba(255,255,255,0.06)',
-      color: palette.black[100],
+      color: palette.textOnDark,
     },
   },
+  navItemCollapsed: {
+    justifyContent: 'center',
+    paddingInline: '0',
+  },
   navItemActive: {
-    backgroundColor: 'rgba(204,164,113,0.18)',
-    borderLeft: `3px solid ${palette.gold[500]}`,
-    color: palette.black[100],
+    backgroundColor: 'rgba(211,188,130,0.16)',
+    borderInlineStartWidth: '3px',
+    borderInlineStartStyle: 'solid',
+    borderInlineStartColor: palette.brass[400],
+    color: palette.textOnDark,
     ':hover': {
-      backgroundColor: 'rgba(204,164,113,0.22)',
+      backgroundColor: 'rgba(211,188,130,0.20)',
     },
   },
   spacer: { flex: 1 },
@@ -99,8 +157,14 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: '10px',
     padding: '16px 20px',
-    borderTop: '1px solid rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(0,0,0,0.12)',
+    borderBlockStartWidth: '1px',
+    borderBlockStartStyle: 'solid',
+    borderBlockStartColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  footerCollapsed: {
+    justifyContent: 'center',
+    padding: '16px 0',
   },
   footerText: {
     minWidth: 0,
@@ -110,14 +174,14 @@ const useStyles = makeStyles({
   footerName: {
     fontSize: '12px',
     fontWeight: 600,
-    color: palette.black[100],
+    color: palette.textOnDark,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
   footerRole: {
     fontSize: '11px',
-    color: palette.green[200],
+    color: palette.ink[200],
   },
   content: {
     flex: 1,
@@ -131,31 +195,30 @@ const useStyles = makeStyles({
     gap: '8px',
     padding: '16px 32px',
     backgroundColor: palette.cardBg,
-    borderBottom: `1px solid ${palette.border}`,
+    borderBlockEndWidth: '1px',
+    borderBlockEndStyle: 'solid',
+    borderBlockEndColor: palette.border,
     flexWrap: 'wrap',
     position: 'sticky',
     top: 0,
     zIndex: 1,
-    boxShadow: '0 1px 3px rgba(33, 28, 30, 0.04)',
+    boxShadow: shadow.xs,
   },
   crumbLink: {
     fontSize: '13px',
     fontWeight: 600,
-    color: palette.black[500],
+    color: palette.neutral[500],
     cursor: 'pointer',
-    transition: 'color 0.12s ease',
+    transitionProperty: 'color',
+    transitionDuration: motion.fast,
     ':hover': {
-      color: palette.gold[600],
+      color: palette.brass[600],
     },
   },
   crumbCurrent: {
     fontSize: '13px',
     fontWeight: 600,
     color: palette.textPrimary,
-  },
-  crumbSep: {
-    fontSize: '13px',
-    color: palette.black[400],
   },
 });
 
@@ -167,6 +230,11 @@ interface Crumb {
 export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: ReactNode }) {
   const styles = useStyles();
   const context = useAppContext();
+  const t = useT();
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+  });
   const fullName = context?.user.fullName;
   const initials = fullName
     ? fullName
@@ -178,32 +246,62 @@ export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: Reac
         .toUpperCase()
     : undefined;
 
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+      return next;
+    });
+  };
+
   return (
     <div className={styles.shell}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>
+      <aside className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''}`}>
+        <div className={`${styles.brand} ${collapsed ? styles.brandCollapsed : ''}`}>
           <span className={styles.iconBadge}>
-            <ScalesRegular fontSize={20} />
+            <ScalesRegular fontSize={22} />
           </span>
-          <div className={styles.titles}>
-            <Text className={styles.title}>Legal Case Mgmt</Text>
-            <Text className={styles.subtitle}>Case &amp; litigation tracking</Text>
-          </div>
+          {!collapsed && (
+            <div className={styles.titles}>
+              <Text className={`${styles.title} diwan-heading`}>{t('appName')}</Text>
+              <Text className={styles.subtitle}>{t('appTagline')}</Text>
+            </div>
+          )}
         </div>
         <nav className={styles.nav}>
-          <div className={`${styles.navItem} ${styles.navItemActive}`}>
-            <DocumentBulletListRegular fontSize={18} />
-            Cases
-          </div>
+          {collapsed ? (
+            <Tooltip content={t('nav_cases')} relationship="label" positioning="after">
+              <div className={`${styles.navItem} ${styles.navItemActive} ${styles.navItemCollapsed}`}>
+                <DocumentBulletListRegular fontSize={18} />
+              </div>
+            </Tooltip>
+          ) : (
+            <div className={`${styles.navItem} ${styles.navItemActive}`}>
+              <DocumentBulletListRegular fontSize={18} />
+              {t('nav_cases')}
+            </div>
+          )}
         </nav>
         <div className={styles.spacer} />
+        <div
+          className={styles.toggleBtn}
+          onClick={toggleCollapsed}
+          title={collapsed ? t('expand_sidebar') : t('collapse_sidebar')}
+        >
+          <ChevronLeftRegular
+            fontSize={16}
+            className={`${styles.toggleIcon} ${collapsed ? styles.toggleIconCollapsed : ''}`}
+          />
+        </div>
         {fullName && (
-          <div className={styles.footer}>
+          <div className={`${styles.footer} ${collapsed ? styles.footerCollapsed : ''}`}>
             <Avatar name={fullName} initials={initials} color="colorful" size={32} />
-            <div className={styles.footerText}>
-              <span className={styles.footerName}>{fullName}</span>
-              <span className={styles.footerRole}>Signed in</span>
-            </div>
+            {!collapsed && (
+              <div className={styles.footerText}>
+                <span className={styles.footerName}>{fullName}</span>
+                <span className={styles.footerRole}>{t('signed_in')}</span>
+              </div>
+            )}
           </div>
         )}
       </aside>
@@ -211,7 +309,9 @@ export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: Reac
         <div className={styles.topbar}>
           {crumbs.map((c, i) => (
             <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {i > 0 && <span className={styles.crumbSep}>/</span>}
+              {i > 0 && (
+                <ChevronRightRegular fontSize={14} style={{ color: tokens.colorNeutralForeground4 }} />
+              )}
               {c.onClick ? (
                 <span className={styles.crumbLink} onClick={c.onClick}>
                   {c.label}
@@ -222,7 +322,9 @@ export function AppShell({ crumbs, children }: { crumbs: Crumb[]; children: Reac
             </span>
           ))}
         </div>
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</main>
+        <main className="diwan-page-enter" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </main>
       </div>
     </div>
   );

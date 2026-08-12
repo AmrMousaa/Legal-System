@@ -2,19 +2,21 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogSurface,
-  DialogTitle,
   DialogBody,
   DialogActions,
   DialogContent,
   Button,
   Spinner,
 } from '@fluentui/react-components';
+import { PersonRegular, GavelRegular, PeopleTeamRegular, NotepadRegular, ScalesRegular } from '@fluentui/react-icons';
 import { TextField, TextAreaField, ChoiceField, UserPickerField } from '../common/FormFields';
-import { DialogAccentBar } from '../common/DialogAccentBar';
+import { DialogHeader, FormSection, useFormDialogStyles } from '../common/FormDialog';
 import { CASE_TYPE_OPTIONS } from '../../types/choices';
 import { useUsers } from '../../hooks/useUsers';
 import { Crb32_casesesService } from '../../generated/services/Crb32_casesesService';
 import { buildCaseCreatePayload, buildCaseLinkPayload, buildCaseUpdatePayload } from '../../types/mappers';
+import { shadow } from '../../theme';
+import { useT } from '../../i18n';
 import type { CaseFormValues, CaseRecord } from '../../types/domain';
 
 interface CaseFormDialogProps {
@@ -34,6 +36,8 @@ const emptyValues: CaseFormValues = {
 };
 
 export function CaseFormDialog({ open, onOpenChange, onSaved, editing }: CaseFormDialogProps) {
+  const t = useT();
+  const dialogStyles = useFormDialogStyles();
   const { users } = useUsers();
   const [values, setValues] = useState<CaseFormValues>(emptyValues);
   const [errors, setErrors] = useState<Partial<Record<keyof CaseFormValues, string>>>({});
@@ -65,10 +69,10 @@ export function CaseFormDialog({ open, onOpenChange, onSaved, editing }: CaseFor
 
   function validate(): boolean {
     const next: Partial<Record<keyof CaseFormValues, string>> = {};
-    if (!values.claimant.trim()) next.claimant = 'Claimant is required.';
-    if (!values.defendant.trim()) next.defendant = 'Defendant is required.';
-    if (!values.responsibleId) next.responsibleId = 'Responsible is required.';
-    if (values.caseType === undefined) next.caseType = 'Case type is required.';
+    if (!values.claimant.trim()) next.claimant = t('required_claimant');
+    if (!values.defendant.trim()) next.defendant = t('required_defendant');
+    if (!values.responsibleId) next.responsibleId = t('required_responsible');
+    if (values.caseType === undefined) next.caseType = t('required_case_type');
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -80,20 +84,20 @@ export function CaseFormDialog({ open, onOpenChange, onSaved, editing }: CaseFor
     try {
       if (editing) {
         const result = await Crb32_casesesService.update(editing.id, buildCaseUpdatePayload(values));
-        if (!result.success) throw new Error(result.error?.message ?? 'Failed to update case.');
+        if (!result.success) throw new Error(result.error?.message ?? t('error_generic'));
         onSaved(editing.id);
       } else {
         const created = await Crb32_casesesService.create(buildCaseCreatePayload(values));
-        if (!created.success) throw new Error(created.error?.message ?? 'Failed to create case.');
+        if (!created.success) throw new Error(created.error?.message ?? t('error_generic'));
         const newId = created.data.crb32_casesid;
         // Auto-generate the locked Link field once the record (and its id) exists.
         const linkResult = await Crb32_casesesService.update(newId, buildCaseLinkPayload(newId, window.location.origin));
-        if (!linkResult.success) throw new Error(linkResult.error?.message ?? 'Case created, but failed to set link.');
+        if (!linkResult.success) throw new Error(linkResult.error?.message ?? t('error_generic'));
         onSaved(newId);
       }
       onOpenChange(false);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
+      setSubmitError(err instanceof Error ? err.message : t('error_generic'));
     } finally {
       setSaving(false);
     }
@@ -101,64 +105,85 @@ export function CaseFormDialog({ open, onOpenChange, onSaved, editing }: CaseFor
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
-      <DialogSurface>
-        <DialogAccentBar />
+      <DialogSurface className={dialogStyles.surface}>
         <DialogBody>
-          <DialogTitle>{editing ? 'Edit case' : 'New case'}</DialogTitle>
-          <DialogContent style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '4px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <TextField
-                label="Claimant"
+          <DialogHeader
+            icon={<ScalesRegular fontSize={22} />}
+            title={editing ? t('edit_case_title') : t('new_case_title')}
+            subtitle={editing ? t('edit_case_subtitle') : t('new_case_subtitle')}
+          />
+          <DialogContent className={dialogStyles.content}>
+            <FormSection icon={<PeopleTeamRegular fontSize={15} />} title={t('section_parties')}>
+              <div className={dialogStyles.grid2}>
+                <TextField
+                  label={t('field_claimant')}
+                  required
+                  value={values.claimant}
+                  onChange={(v) => setValues((s) => ({ ...s, claimant: v }))}
+                  error={errors.claimant}
+                />
+                <TextField
+                  label={t('field_defendant')}
+                  required
+                  value={values.defendant}
+                  onChange={(v) => setValues((s) => ({ ...s, defendant: v }))}
+                  error={errors.defendant}
+                />
+              </div>
+            </FormSection>
+
+            <FormSection icon={<GavelRegular fontSize={15} />} title={t('section_classification')}>
+              <ChoiceField
+                label={t('field_case_type')}
                 required
-                value={values.claimant}
-                onChange={(v) => setValues((s) => ({ ...s, claimant: v }))}
-                error={errors.claimant}
+                value={values.caseType}
+                onChange={(v) => setValues((s) => ({ ...s, caseType: v }))}
+                options={CASE_TYPE_OPTIONS}
+                error={errors.caseType}
               />
-              <TextField
-                label="Defendant"
-                required
-                value={values.defendant}
-                onChange={(v) => setValues((s) => ({ ...s, defendant: v }))}
-                error={errors.defendant}
+            </FormSection>
+
+            <FormSection icon={<PersonRegular fontSize={15} />} title={t('section_assignment')}>
+              <div className={dialogStyles.grid2}>
+                <UserPickerField
+                  label={t('field_responsible')}
+                  required
+                  value={values.responsibleId}
+                  onChange={(v) => setValues((s) => ({ ...s, responsibleId: v }))}
+                  users={users}
+                  error={errors.responsibleId}
+                />
+                <UserPickerField
+                  label={t('field_second_responsible')}
+                  value={values.secondResponsibleId}
+                  onChange={(v) => setValues((s) => ({ ...s, secondResponsibleId: v }))}
+                  users={users}
+                />
+              </div>
+            </FormSection>
+
+            <FormSection icon={<NotepadRegular fontSize={15} />} title={t('section_details')}>
+              <TextAreaField
+                label={t('field_description')}
+                value={values.description}
+                onChange={(v) => setValues((s) => ({ ...s, description: v }))}
               />
-            </div>
-            <ChoiceField
-              label="Case type"
-              required
-              value={values.caseType}
-              onChange={(v) => setValues((s) => ({ ...s, caseType: v }))}
-              options={CASE_TYPE_OPTIONS}
-              error={errors.caseType}
-            />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <UserPickerField
-                label="Responsible"
-                required
-                value={values.responsibleId}
-                onChange={(v) => setValues((s) => ({ ...s, responsibleId: v }))}
-                users={users}
-                error={errors.responsibleId}
-              />
-              <UserPickerField
-                label="Second responsible"
-                value={values.secondResponsibleId}
-                onChange={(v) => setValues((s) => ({ ...s, secondResponsibleId: v }))}
-                users={users}
-              />
-            </div>
-            <TextAreaField
-              label="Description"
-              value={values.description}
-              onChange={(v) => setValues((s) => ({ ...s, description: v }))}
-            />
-            {submitError && <span style={{ color: '#FB3748', fontSize: '13px' }}>{submitError}</span>}
+            </FormSection>
+
+            {submitError && <span className={dialogStyles.errorBanner}>{submitError}</span>}
           </DialogContent>
           <DialogActions>
             <Button appearance="secondary" onClick={() => onOpenChange(false)} disabled={saving}>
-              Cancel
+              {t('cancel')}
             </Button>
-            <Button appearance="primary" onClick={handleSubmit} disabled={saving} icon={saving ? <Spinner size="tiny" /> : undefined}>
-              {editing ? 'Save changes' : 'Create case'}
+            <Button
+              appearance="primary"
+              onClick={handleSubmit}
+              disabled={saving}
+              icon={saving ? <Spinner size="tiny" /> : undefined}
+              style={{ boxShadow: shadow.brassGlow }}
+            >
+              {editing ? t('save_changes') : t('create_case')}
             </Button>
           </DialogActions>
         </DialogBody>

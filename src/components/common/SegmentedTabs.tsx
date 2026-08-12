@@ -1,5 +1,5 @@
-import { makeStyles, tokens } from '@fluentui/react-components';
-import { palette } from '../../theme';
+import { makeStyles } from '@fluentui/react-components';
+import { palette, radius, motion } from '../../theme';
 
 export interface SegmentedTabOption {
   value: string;
@@ -10,25 +10,27 @@ const useStyles = makeStyles({
   wrap: {
     display: 'inline-flex',
     padding: '4px',
-    backgroundColor: palette.black[200],
-    borderRadius: tokens.borderRadiusXLarge,
+    backgroundColor: palette.neutral[150],
+    borderRadius: radius.xl,
     gap: '2px',
   },
   tab: {
     padding: '9px 20px',
-    borderRadius: tokens.borderRadiusLarge,
+    borderRadius: radius.lg,
     fontSize: '13px',
     fontWeight: 600,
-    color: palette.black[500],
+    color: palette.neutral[500],
     cursor: 'pointer',
     userSelect: 'none',
-    transition: 'all 0.12s ease',
+    transitionProperty: 'background-color, color, box-shadow',
+    transitionDuration: motion.fast,
+    transitionTimingFunction: motion.easing,
     whiteSpace: 'nowrap',
   },
   tabActive: {
     backgroundColor: palette.cardBg,
-    color: palette.green[700],
-    boxShadow: '0 1px 4px rgba(33, 28, 30, 0.14)',
+    color: palette.ink[700],
+    boxShadow: '0 1px 4px rgba(11, 17, 28, 0.14)',
   },
 });
 

@@ -1,7 +1,8 @@
 import { Button, Text, makeStyles, tokens } from '@fluentui/react-components';
 import { EditRegular } from '@fluentui/react-icons';
 import { LockedField } from '../common/FormFields';
-import { palette } from '../../theme';
+import { palette, radius } from '../../theme';
+import { useT } from '../../i18n';
 import type { CaseRecord } from '../../types/domain';
 
 const useStyles = makeStyles({
@@ -37,9 +38,9 @@ const useStyles = makeStyles({
     color: palette.textPrimary,
   },
   descBlock: {
-    backgroundColor: palette.gold[50],
+    backgroundColor: palette.brass[50],
     border: `1px solid ${palette.borderSubtle}`,
-    borderRadius: tokens.borderRadiusMedium,
+    borderRadius: radius.md,
     padding: '12px 14px',
     fontSize: '13px',
     color: palette.textPrimary,
@@ -59,29 +60,30 @@ function ReadField({ label, value }: { label: string; value: string }) {
 
 export function CaseOverviewTab({ record, onEdit }: { record: CaseRecord; onEdit: () => void }) {
   const styles = useStyles();
+  const t = useT();
   return (
-    <div className={styles.wrap}>
+    <div className={`${styles.wrap} diwan-page-enter`}>
       <div className={styles.header}>
-        <Text weight="semibold">Case details</Text>
+        <Text weight="semibold">{t('case_details')}</Text>
         <Button size="small" appearance="secondary" icon={<EditRegular />} onClick={onEdit}>
-          Edit case
+          {t('edit_case')}
         </Button>
       </div>
 
       <div className={styles.grid}>
-        <ReadField label="Claimant" value={record.claimant} />
-        <ReadField label="Defendant" value={record.defendant} />
-        <ReadField label="Case type" value={record.caseTypeLabel ?? ''} />
-        <ReadField label="Responsible" value={record.responsibleName} />
-        <ReadField label="Second responsible" value={record.secondResponsibleName ?? ''} />
-        <LockedField label="Current stage" hint="Auto-set from the most recently added stage." value={record.currentStageLabel} />
+        <ReadField label={t('field_claimant')} value={record.claimant} />
+        <ReadField label={t('field_defendant')} value={record.defendant} />
+        <ReadField label={t('field_case_type')} value={record.caseTypeLabel ?? ''} />
+        <ReadField label={t('field_responsible')} value={record.responsibleName} />
+        <ReadField label={t('field_second_responsible')} value={record.secondResponsibleName ?? ''} />
+        <LockedField label={t('field_current_stage')} hint={t('field_current_stage_hint')} value={record.currentStageLabel} />
       </div>
 
-      <LockedField label="Link" hint="Generated automatically when the case was created." value={record.link} />
+      <LockedField label={t('field_link')} hint={t('field_link_hint')} value={record.link} />
 
       <div className={styles.field}>
-        <span className={styles.label}>Description</span>
-        <div className={styles.descBlock}>{record.description || 'No description provided.'}</div>
+        <span className={styles.label}>{t('field_description')}</span>
+        <div className={styles.descBlock}>{record.description || t('no_description')}</div>
       </div>
     </div>
   );

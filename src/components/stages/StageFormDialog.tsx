@@ -2,20 +2,22 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogSurface,
-  DialogTitle,
   DialogBody,
   DialogActions,
   DialogContent,
   Button,
   Spinner,
 } from '@fluentui/react-components';
+import { DocumentBulletListRegular, PeopleTeamRegular, NotepadRegular, FlagRegular } from '@fluentui/react-icons';
 import { TextField, TextAreaField, ChoiceField, NumberField } from '../common/FormFields';
-import { DialogAccentBar } from '../common/DialogAccentBar';
+import { DialogHeader, FormSection, useFormDialogStyles } from '../common/FormDialog';
 import { STAGE_NAME_OPTIONS } from '../../types/choices';
 import { Crb32_stagesesService } from '../../generated/services/Crb32_stagesesService';
 import { Crb32_casesesService } from '../../generated/services/Crb32_casesesService';
 import { buildStageCreatePayload, buildCaseCurrentStagePayload } from '../../types/mappers';
 import { invalidateStageDirectory } from '../../hooks/stageDirectory';
+import { shadow } from '../../theme';
+import { useT } from '../../i18n';
 import type { StageFormValues } from '../../types/domain';
 
 interface StageFormDialogProps {
@@ -36,6 +38,8 @@ const emptyValues: StageFormValues = {
 };
 
 export function StageFormDialog({ open, onOpenChange, caseId, onSaved }: StageFormDialogProps) {
+  const t = useT();
+  const dialogStyles = useFormDialogStyles();
   const [values, setValues] = useState<StageFormValues>(emptyValues);
   const [errors, setErrors] = useState<Partial<Record<keyof StageFormValues, string>>>({});
   const [saving, setSaving] = useState(false);
@@ -53,7 +57,7 @@ export function StageFormDialog({ open, onOpenChange, caseId, onSaved }: StageFo
 
   function validate(): boolean {
     const next: Partial<Record<keyof StageFormValues, string>> = {};
-    if (values.stageName === undefined) next.stageName = 'Stage name is required.';
+    if (values.stageName === undefined) next.stageName = t('required_stage_name');
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -64,16 +68,16 @@ export function StageFormDialog({ open, onOpenChange, caseId, onSaved }: StageFo
     setSubmitError(undefined);
     try {
       const created = await Crb32_stagesesService.create(buildStageCreatePayload(caseId, values));
-      if (!created.success) throw new Error(created.error?.message ?? 'Failed to create stage.');
+      if (!created.success) throw new Error(created.error?.message ?? t('error_generic'));
       const newStageId = created.data.crb32_stagesid;
       invalidateStageDirectory();
       // The new stage becomes the case's locked "Current Stage".
       const caseUpdate = await Crb32_casesesService.update(caseId, buildCaseCurrentStagePayload(newStageId));
-      if (!caseUpdate.success) throw new Error(caseUpdate.error?.message ?? 'Stage created, but failed to update current stage.');
+      if (!caseUpdate.success) throw new Error(caseUpdate.error?.message ?? t('error_generic'));
       onSaved();
       onOpenChange(false);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
+      setSubmitError(err instanceof Error ? err.message : t('error_generic'));
     } finally {
       setSaving(false);
     }
@@ -81,61 +85,79 @@ export function StageFormDialog({ open, onOpenChange, caseId, onSaved }: StageFo
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
-      <DialogSurface>
-        <DialogAccentBar />
+      <DialogSurface className={dialogStyles.surface}>
         <DialogBody>
-          <DialogTitle>New stage</DialogTitle>
-          <DialogContent style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '4px' }}>
-            <ChoiceField
-              label="Stage name"
-              required
-              value={values.stageName}
-              onChange={(v) => setValues((s) => ({ ...s, stageName: v }))}
-              options={STAGE_NAME_OPTIONS}
-              error={errors.stageName}
-            />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
-              <NumberField
-                label="Number"
-                value={values.number}
-                onChange={(v) => setValues((s) => ({ ...s, number: v }))}
+          <DialogHeader
+            icon={<FlagRegular fontSize={22} />}
+            title={t('new_stage_title')}
+            subtitle={t('new_stage_subtitle')}
+          />
+          <DialogContent className={dialogStyles.content}>
+            <FormSection icon={<DocumentBulletListRegular fontSize={15} />} title={t('section_classification')}>
+              <ChoiceField
+                label={t('field_stage_name')}
+                required
+                value={values.stageName}
+                onChange={(v) => setValues((s) => ({ ...s, stageName: v }))}
+                options={STAGE_NAME_OPTIONS}
+                error={errors.stageName}
               />
-              <NumberField
-                label="Stage year"
-                value={values.stageYear}
-                onChange={(v) => setValues((s) => ({ ...s, stageYear: v }))}
+              <div className={dialogStyles.grid3}>
+                <NumberField
+                  label={t('field_number')}
+                  value={values.number}
+                  onChange={(v) => setValues((s) => ({ ...s, number: v }))}
+                />
+                <NumberField
+                  label={t('field_stage_year')}
+                  value={values.stageYear}
+                  onChange={(v) => setValues((s) => ({ ...s, stageYear: v }))}
+                />
+                <NumberField
+                  label={t('field_jungle_district')}
+                  value={values.jungleDistrict}
+                  onChange={(v) => setValues((s) => ({ ...s, jungleDistrict: v }))}
+                />
+              </div>
+            </FormSection>
+
+            <FormSection icon={<PeopleTeamRegular fontSize={15} />} title={t('section_parties')}>
+              <div className={dialogStyles.grid2}>
+                <TextField
+                  label={t('field_claimant_name')}
+                  value={values.claimantName}
+                  onChange={(v) => setValues((s) => ({ ...s, claimantName: v }))}
+                />
+                <TextField
+                  label={t('field_defendant_name')}
+                  value={values.defendantName}
+                  onChange={(v) => setValues((s) => ({ ...s, defendantName: v }))}
+                />
+              </div>
+            </FormSection>
+
+            <FormSection icon={<NotepadRegular fontSize={15} />} title={t('section_details')}>
+              <TextAreaField
+                label={t('field_description')}
+                value={values.description}
+                onChange={(v) => setValues((s) => ({ ...s, description: v }))}
               />
-              <NumberField
-                label="Jungle district"
-                value={values.jungleDistrict}
-                onChange={(v) => setValues((s) => ({ ...s, jungleDistrict: v }))}
-              />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <TextField
-                label="Claimant name"
-                value={values.claimantName}
-                onChange={(v) => setValues((s) => ({ ...s, claimantName: v }))}
-              />
-              <TextField
-                label="Defendant name"
-                value={values.defendantName}
-                onChange={(v) => setValues((s) => ({ ...s, defendantName: v }))}
-              />
-            </div>
-            <TextAreaField
-              label="Description"
-              value={values.description}
-              onChange={(v) => setValues((s) => ({ ...s, description: v }))}
-            />
-            {submitError && <span style={{ color: '#FB3748', fontSize: '13px' }}>{submitError}</span>}
+            </FormSection>
+
+            {submitError && <span className={dialogStyles.errorBanner}>{submitError}</span>}
           </DialogContent>
           <DialogActions>
             <Button appearance="secondary" onClick={() => onOpenChange(false)} disabled={saving}>
-              Cancel
+              {t('cancel')}
             </Button>
-            <Button appearance="primary" onClick={handleSubmit} disabled={saving} icon={saving ? <Spinner size="tiny" /> : undefined}>
-              Add stage
+            <Button
+              appearance="primary"
+              onClick={handleSubmit}
+              disabled={saving}
+              icon={saving ? <Spinner size="tiny" /> : undefined}
+              style={{ boxShadow: shadow.brassGlow }}
+            >
+              {t('add_stage')}
             </Button>
           </DialogActions>
         </DialogBody>

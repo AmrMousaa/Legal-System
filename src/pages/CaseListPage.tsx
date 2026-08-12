@@ -1,13 +1,23 @@
 import { useMemo, useState } from 'react';
-import { Button, Input, Spinner, Text, makeStyles, tokens } from '@fluentui/react-components';
-import { AddRegular, SearchRegular, GavelRegular, ArrowClockwiseRegular } from '@fluentui/react-icons';
+import { Button, Input, Spinner, Text, makeStyles } from '@fluentui/react-components';
+import {
+  AddRegular,
+  SearchRegular,
+  GavelRegular,
+  ArrowClockwiseRegular,
+  ScalesRegular,
+  DocumentBulletListRegular,
+} from '@fluentui/react-icons';
 import { useCases } from '../hooks/useCases';
 import { CaseCard } from '../components/cases/CaseCard';
 import { CaseFormDialog } from '../components/cases/CaseFormDialog';
-import { LoadingState, ErrorState, EmptyState } from '../components/common/StatusViews';
+import { ErrorState, EmptyState } from '../components/ui/StatusViews';
+import { SkeletonCaseGrid } from '../components/ui/Skeleton';
+import { StatTile } from '../components/ui/StatCard';
 import { useAppToast } from '../hooks/useAppToast';
 import { AppShell } from '../components/layout/AppShell';
-import { palette } from '../theme';
+import { palette, radius, shadow, motion, type StatusTone } from '../theme';
+import { useT } from '../i18n';
 
 const useStyles = makeStyles({
   page: {
@@ -15,117 +25,142 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
-    maxWidth: '1280px',
     padding: '28px 32px 48px',
     gap: '20px',
   },
-  toolbar: {
+  headerCard: {
+    backgroundColor: palette.cardBg,
+    border: `1px solid ${palette.border}`,
+    borderRadius: radius.xl,
+    boxShadow: shadow.sm,
+    overflow: 'hidden',
+  },
+  headerTop: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '16px',
     flexWrap: 'wrap',
+    padding: '22px 26px',
+    borderBlockEndWidth: '1px',
+    borderBlockEndStyle: 'solid',
+    borderBlockEndColor: palette.borderSubtle,
+  },
+  titleGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    minWidth: 0,
+  },
+  titleIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '46px',
+    height: '46px',
+    borderRadius: radius.md,
+    backgroundImage: palette.gradientInk,
+    color: palette.brass[300],
+    flexShrink: 0,
+    boxShadow: shadow.sm,
   },
   titleBlock: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
+    gap: '3px',
+    minWidth: 0,
   },
   title: {
-    fontSize: '26px',
+    fontSize: '25px',
     fontWeight: 700,
     letterSpacing: '-0.01em',
-    backgroundImage: `linear-gradient(90deg, ${palette.textPrimary}, ${palette.green[600]})`,
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    color: 'transparent',
+    color: palette.textPrimary,
+    lineHeight: 1.15,
+  },
+  subtitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
   subtitle: {
     fontSize: '13px',
-    color: tokens.colorNeutralForeground3,
+    color: palette.textSecondary,
   },
-  actions: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  statRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    flexWrap: 'wrap',
-  },
-  statPill: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '9px 16px',
-    borderRadius: tokens.borderRadiusXLarge,
-    backgroundColor: palette.cardBg,
-    border: `1px solid ${palette.border}`,
-    boxShadow: '0 1px 2px rgba(33, 28, 30, 0.04)',
-  },
-  statDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    flexShrink: 0,
-  },
-  statValue: {
-    fontSize: '14px',
+  dateChip: {
+    fontSize: '11px',
     fontWeight: 700,
-    color: palette.textPrimary,
+    color: palette.brass[600],
+    backgroundColor: palette.brass[100],
+    borderRadius: radius.pill,
+    padding: '2px 10px',
   },
-  statLabel: {
-    fontSize: '12px',
-    fontWeight: 600,
-    color: palette.black[500],
+  statsRow: {
+    display: 'flex',
+    alignItems: 'stretch',
+    flexWrap: 'wrap',
+    padding: '16px 26px',
+    borderBlockEndWidth: '1px',
+    borderBlockEndStyle: 'solid',
+    borderBlockEndColor: palette.borderSubtle,
   },
-  toolbar2: {
+  searchRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    padding: '10px',
-    backgroundColor: palette.cardBg,
-    border: `1px solid ${palette.border}`,
-    borderRadius: tokens.borderRadiusXLarge,
-    boxShadow: '0 1px 2px rgba(33, 28, 30, 0.04)',
+    padding: '16px 26px',
   },
   searchInput: {
     flex: 1,
+    borderRadius: radius.pill,
+    backgroundColor: palette.neutral[50],
+    transitionProperty: 'background-color, box-shadow',
+    transitionDuration: motion.fast,
+    ':hover': {
+      backgroundColor: palette.neutral[100],
+    },
+    ':focus-within': {
+      backgroundColor: palette.cardBg,
+      boxShadow: `0 0 0 3px ${palette.brass[100]}`,
+    },
+  },
+  refreshButton: {
+    borderRadius: radius.pill,
+    flexShrink: 0,
   },
   chipRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     flexWrap: 'wrap',
+    padding: '0 26px 18px',
   },
   chip: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
     padding: '6px 14px',
-    borderRadius: tokens.borderRadiusCircular,
+    borderRadius: radius.pill,
     fontSize: '13px',
     fontWeight: 600,
     cursor: 'pointer',
     border: `1px solid ${palette.border}`,
     backgroundColor: palette.cardBg,
-    color: palette.black[500],
-    transition: 'all 0.12s ease',
+    color: palette.neutral[500],
+    transitionProperty: 'border-color, color, background-color',
+    transitionDuration: '120ms',
     userSelect: 'none',
     ':hover': {
-      border: `1px solid ${palette.gold[500]}`,
+      border: `1px solid ${palette.brass[400]}`,
       color: palette.textPrimary,
     },
   },
   chipActive: {
-    backgroundColor: palette.green[500],
-    border: `1px solid ${palette.green[500]}`,
-    color: palette.black[100],
+    backgroundColor: palette.ink[700],
+    border: `1px solid ${palette.ink[700]}`,
+    color: palette.textOnDark,
     ':hover': {
-      border: `1px solid ${palette.green[500]}`,
-      color: palette.black[100],
+      border: `1px solid ${palette.ink[700]}`,
+      color: palette.textOnDark,
     },
   },
   grid: {
@@ -136,14 +171,15 @@ const useStyles = makeStyles({
   surface: {
     backgroundColor: palette.cardBg,
     border: `1px solid ${palette.border}`,
-    borderRadius: tokens.borderRadiusLarge,
+    borderRadius: radius.lg,
   },
 });
 
-const STAT_DOT_COLORS = [palette.gold[500], palette.green[500], palette.black[500], palette.error[500], palette.success[500]];
+const STAT_TONES: StatusTone[] = ['brass', 'ink', 'sage', 'burgundy', 'amber'];
 
 export function CaseListPage({ onOpenCase }: { onOpenCase: (caseId: string) => void }) {
   const styles = useStyles();
+  const t = useT();
   const { cases, status, error, refresh } = useCases();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<number | undefined>();
@@ -165,7 +201,7 @@ export function CaseListPage({ onOpenCase }: { onOpenCase: (caseId: string) => v
     return cases.filter((c) => {
       if (typeFilter !== undefined && c.caseType !== typeFilter) return false;
       if (!q) return true;
-      return [c.claimant, c.defendant, c.responsibleName, c.caseTypeLabel, c.description]
+      return [c.caseNumber, c.claimant, c.defendant, c.responsibleName, c.caseTypeLabel, c.description]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
@@ -183,7 +219,12 @@ export function CaseListPage({ onOpenCase }: { onOpenCase: (caseId: string) => v
   }, [cases]);
 
   const today = useMemo(
-    () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    () =>
+      new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
     []
   );
 
@@ -198,85 +239,92 @@ export function CaseListPage({ onOpenCase }: { onOpenCase: (caseId: string) => v
   };
 
   return (
-    <AppShell crumbs={[{ label: 'Cases' }]}>
+    <AppShell crumbs={[{ label: t('nav_cases') }]}>
       <div className={styles.page}>
-        <div className={styles.toolbar}>
-          <div className={styles.titleBlock}>
-            <Text className={styles.title}>Cases</Text>
-            <Text className={styles.subtitle}>All Cases · {today}</Text>
-          </div>
-          <div className={styles.actions}>
+        <div className={`${styles.headerCard} diwan-card-enter`}>
+          <div className={styles.headerTop}>
+            <div className={styles.titleGroup}>
+              <span className={styles.titleIcon}>
+                <ScalesRegular fontSize={22} />
+              </span>
+              <div className={styles.titleBlock}>
+                <Text className={`${styles.title} diwan-heading`}>{t('cases_title')}</Text>
+                <div className={styles.subtitleRow}>
+                  <Text className={styles.subtitle}>{t('cases_subtitle')}</Text>
+                  <span className={styles.dateChip}>{today}</span>
+                </div>
+              </div>
+            </div>
             <Button
               appearance="primary"
               icon={<AddRegular />}
               onClick={() => setDialogOpen(true)}
-              style={{ boxShadow: '0 6px 14px rgba(204, 164, 113, 0.35)' }}
+              style={{ boxShadow: shadow.brassGlow }}
             >
-              New case
+              {t('new_case')}
             </Button>
           </div>
-        </div>
 
-        <div className={styles.statRow}>
-          <span className={styles.statPill}>
-            <span className={styles.statDot} style={{ backgroundColor: palette.black[500] }} />
-            <span className={styles.statValue}>{cases.length}</span>
-            <span className={styles.statLabel}>Total</span>
-          </span>
-          {typeStats.map((t, i) => (
-            <span className={styles.statPill} key={t.label}>
-              <span className={styles.statDot} style={{ backgroundColor: STAT_DOT_COLORS[i % STAT_DOT_COLORS.length] }} />
-              <span className={styles.statValue}>{t.count}</span>
-              <span className={styles.statLabel}>{t.label}</span>
-            </span>
-          ))}
-        </div>
-
-        <div className={styles.toolbar2}>
-          <Input
-            className={styles.searchInput}
-            contentBefore={<SearchRegular />}
-            placeholder="Search by claimant, defendant, responsible…"
-            value={search}
-            onChange={(_, data) => setSearch(data.value)}
-          />
-          <Button
-            icon={refreshing ? <Spinner size="tiny" /> : <ArrowClockwiseRegular />}
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            Refresh
-          </Button>
-        </div>
-
-        {typeOptions.length > 1 && (
-          <div className={styles.chipRow}>
-            <span
-              className={`${styles.chip} ${typeFilter === undefined ? styles.chipActive : ''}`}
-              onClick={() => setTypeFilter(undefined)}
-            >
-              <GavelRegular fontSize={14} />
-              All types
-            </span>
-            {typeOptions.map((t) => (
-              <span
-                key={t.value}
-                className={`${styles.chip} ${typeFilter === t.value ? styles.chipActive : ''}`}
-                onClick={() => setTypeFilter(typeFilter === t.value ? undefined : t.value)}
-              >
-                {t.label}
-              </span>
+          <div className={styles.statsRow}>
+            <StatTile icon={<DocumentBulletListRegular fontSize={18} />} value={cases.length} label={t('total')} tone="ink" />
+            {typeStats.map((s, i) => (
+              <StatTile
+                key={s.label}
+                icon={<GavelRegular fontSize={18} />}
+                value={s.count}
+                label={s.label}
+                tone={STAT_TONES[i % STAT_TONES.length]}
+              />
             ))}
           </div>
-        )}
 
-        {status === 'loading' && <LoadingState label="Loading cases…" />}
-        {status === 'error' && <ErrorState message={error ?? 'Failed to load cases.'} onRetry={refresh} />}
+          <div className={styles.searchRow}>
+            <Input
+              className={styles.searchInput}
+              contentBefore={<SearchRegular />}
+              placeholder={t('search_placeholder')}
+              value={search}
+              onChange={(_, data) => setSearch(data.value)}
+            />
+            <Button
+              className={styles.refreshButton}
+              icon={refreshing ? <Spinner size="tiny" /> : <ArrowClockwiseRegular />}
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              {t('refresh')}
+            </Button>
+          </div>
+
+          {typeOptions.length > 1 && (
+            <div className={styles.chipRow}>
+              <span
+                className={`${styles.chip} ${typeFilter === undefined ? styles.chipActive : ''}`}
+                onClick={() => setTypeFilter(undefined)}
+              >
+                <GavelRegular fontSize={14} />
+                {t('all_types')}
+              </span>
+              {typeOptions.map((opt) => (
+                <span
+                  key={opt.value}
+                  className={`${styles.chip} ${typeFilter === opt.value ? styles.chipActive : ''}`}
+                  onClick={() => setTypeFilter(typeFilter === opt.value ? undefined : opt.value)}
+                >
+                  {opt.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {status === 'loading' && <SkeletonCaseGrid />}
+        {status === 'error' && <ErrorState message={error ?? t('error_generic')} onRetry={refresh} />}
         {status === 'success' && filtered.length === 0 && (
           <div className={styles.surface}>
             <EmptyState
-              title={cases.length === 0 ? 'No cases yet' : 'No matching cases'}
-              subtitle={cases.length === 0 ? 'Create your first case to get started.' : 'Try a different search term or filter.'}
+              title={cases.length === 0 ? t('no_cases_title') : t('no_matching_title')}
+              subtitle={cases.length === 0 ? t('no_cases_subtitle') : t('no_matching_subtitle')}
             />
           </div>
         )}
@@ -293,7 +341,7 @@ export function CaseListPage({ onOpenCase }: { onOpenCase: (caseId: string) => v
           onOpenChange={setDialogOpen}
           onSaved={(caseId) => {
             void refresh();
-            toast.success('Case created', 'The new case has been added to your file.');
+            toast.success(t('toast_case_created'), t('toast_case_created_body'));
             onOpenCase(caseId);
           }}
         />

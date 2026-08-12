@@ -21,6 +21,7 @@ const bind = (entitySet: string, id: string) => `/${entitySet}(${id})`;
 export function toCaseRecord(row: Crb32_caseses): CaseRecord {
   return {
     id: row.crb32_casesid,
+    caseNumber: row.crb32_newcolumn,
     claimant: row.crb32_from ?? '',
     defendant: row.crb32_to ?? '',
     responsibleId: row._crb32_responsible_value ?? '',

@@ -1,59 +1,46 @@
-import { Accordion, AccordionItem, AccordionHeader, AccordionPanel, Button, Text, makeStyles, tokens } from '@fluentui/react-components';
-import { AddRegular } from '@fluentui/react-icons';
+import { Button, Text, makeStyles } from '@fluentui/react-components';
+import { AddRegular, NotepadRegular } from '@fluentui/react-icons';
 import type { StageRecord, UpdateRecord } from '../../types/domain';
 import { UpdatesTable } from '../updates/UpdatesTable';
-import { EmptyState } from '../common/StatusViews';
-import { Pill } from '../common/Pill';
-import { palette } from '../../theme';
+import { EmptyState } from '../ui/StatusViews';
+import { Badge } from '../ui/Badge';
+import { Timeline, TimelineItem } from '../ui/Timeline';
+import { palette, radius } from '../../theme';
+import { useT } from '../../i18n';
 
 const useStyles = makeStyles({
-  headerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingRight: '8px',
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    flexWrap: 'wrap',
-  },
-  badge: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '30px',
-    height: '30px',
-    borderRadius: tokens.borderRadiusCircular,
-    backgroundColor: palette.green[100],
-    color: palette.green[700],
-    fontSize: '12px',
-    fontWeight: 700,
-    flexShrink: 0,
-  },
   stageName: {
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: 700,
     color: palette.textPrimary,
   },
   parties: {
     fontSize: '13px',
-    color: tokens.colorNeutralForeground3,
+    color: palette.textSecondary,
   },
   panel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
-    paddingBottom: '10px',
+    gap: '16px',
   },
   desc: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
     fontSize: '13px',
-    color: palette.black[500],
-    backgroundColor: palette.black[200],
-    borderRadius: tokens.borderRadiusMedium,
-    padding: '10px 12px',
+    color: palette.neutral[700],
+    backgroundColor: palette.brass[50],
+    borderInlineStartWidth: '3px',
+    borderInlineStartStyle: 'solid',
+    borderInlineStartColor: palette.brass[300],
+    borderRadius: radius.md,
+    padding: '10px 14px',
+    lineHeight: 1.5,
+  },
+  descIcon: {
+    color: palette.brass[500],
+    flexShrink: 0,
+    marginTop: '2px',
   },
   panelHeader: {
     display: 'flex',
@@ -70,50 +57,62 @@ interface StagesAccordionProps {
 
 export function StagesAccordion({ stages, updatesByStage, onAddUpdate }: StagesAccordionProps) {
   const styles = useStyles();
+  const t = useT();
 
   if (stages.length === 0) {
-    return <EmptyState title="No stages yet" subtitle="Add the first stage to start tracking this case's progress." />;
+    return <EmptyState title={t('no_stages_title')} subtitle={t('no_stages_subtitle')} />;
   }
 
   return (
-    <Accordion collapsible multiple defaultOpenItems={[stages[0].id]}>
+    <Timeline>
       {stages.map((stage, index) => {
         const stageUpdates = updatesByStage.get(stage.id) ?? [];
+        const isLast = index === stages.length - 1;
+        const isCurrent = index === 0;
         return (
-          <AccordionItem key={stage.id} value={stage.id}>
-            <AccordionHeader>
-              <div className={styles.headerRow}>
-                <div className={styles.headerLeft}>
-                  <span className={styles.badge}>{stages.length - index}</span>
-                  <Text className={styles.stageName}>{stage.stageNameLabel || 'Stage'}</Text>
-                  {stage.number !== undefined && <Pill tone="outline">#{stage.number}</Pill>}
-                  {stage.stageYear !== undefined && <Pill tone="outline">{stage.stageYear}</Pill>}
-                  <span className={styles.parties}>
-                    {[stage.claimantName, stage.defendantName].filter(Boolean).join(' vs ')}
-                  </span>
+          <TimelineItem
+            key={stage.id}
+            marker={stages.length - index}
+            defaultOpen={index === 0}
+            last={isLast}
+            current={isCurrent}
+            summaryLeft={
+              <>
+                <Text className={styles.stageName}>{stage.stageNameLabel || 'Stage'}</Text>
+                {isCurrent && <Badge tone="brass">{t('current_stage_tag')}</Badge>}
+                {stage.number !== undefined && <Badge tone="outline">#{stage.number}</Badge>}
+                {stage.stageYear !== undefined && <Badge tone="outline">{stage.stageYear}</Badge>}
+                <span className={styles.parties}>
+                  {[stage.claimantName, stage.defendantName].filter(Boolean).join(` ${t('vs')} `)}
+                </span>
+              </>
+            }
+            summaryRight={
+              <Badge tone="sage">
+                {stageUpdates.length} {stageUpdates.length === 1 ? t('stage_updates_count_one') : t('stage_updates_count_other')}
+              </Badge>
+            }
+          >
+            <div className={styles.panel}>
+              {stage.description && (
+                <div className={styles.desc}>
+                  <NotepadRegular fontSize={15} className={styles.descIcon} />
+                  <Text>{stage.description}</Text>
                 </div>
-                <Pill tone="green">
-                  {stageUpdates.length} update{stageUpdates.length === 1 ? '' : 's'}
-                </Pill>
+              )}
+              <div className={styles.panelHeader}>
+                <Text weight="semibold" size={200}>
+                  {t('tab_updates')}
+                </Text>
+                <Button size="small" appearance="subtle" icon={<AddRegular />} onClick={() => onAddUpdate(stage.id)}>
+                  {t('add_update')}
+                </Button>
               </div>
-            </AccordionHeader>
-            <AccordionPanel>
-              <div className={styles.panel}>
-                {stage.description && <Text className={styles.desc}>{stage.description}</Text>}
-                <div className={styles.panelHeader}>
-                  <Text weight="semibold" size={200}>
-                    Updates
-                  </Text>
-                  <Button size="small" appearance="subtle" icon={<AddRegular />} onClick={() => onAddUpdate(stage.id)}>
-                    Add update
-                  </Button>
-                </div>
-                <UpdatesTable updates={stageUpdates} />
-              </div>
-            </AccordionPanel>
-          </AccordionItem>
+              <UpdatesTable updates={stageUpdates} />
+            </div>
+          </TimelineItem>
         );
       })}
-    </Accordion>
+    </Timeline>
   );
 }

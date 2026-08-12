@@ -2,18 +2,20 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogSurface,
-  DialogTitle,
   DialogBody,
   DialogActions,
   DialogContent,
   Button,
   Spinner,
 } from '@fluentui/react-components';
+import { DocumentBulletListRegular, CalendarRegular, NotepadRegular, AttachRegular } from '@fluentui/react-icons';
 import { TextAreaField, ChoiceField, DateField, StagePickerField, LockedField } from '../common/FormFields';
-import { DialogAccentBar } from '../common/DialogAccentBar';
+import { DialogHeader, FormSection, useFormDialogStyles } from '../common/FormDialog';
 import { UPDATE_TYPE_OPTIONS, STAGE_NAME_OPTIONS, labelForOption } from '../../types/choices';
 import { Crb32_updatesesService } from '../../generated/services/Crb32_updatesesService';
 import { buildUpdateCreatePayload } from '../../types/mappers';
+import { shadow } from '../../theme';
+import { useT } from '../../i18n';
 import type { StageRecord, UpdateFormValues } from '../../types/domain';
 
 interface UpdateFormDialogProps {
@@ -34,6 +36,8 @@ const emptyValues: UpdateFormValues = {
 };
 
 export function UpdateFormDialog({ open, onOpenChange, caseId, stages, defaultStageId, onSaved }: UpdateFormDialogProps) {
+  const t = useT();
+  const dialogStyles = useFormDialogStyles();
   const [values, setValues] = useState<UpdateFormValues>(emptyValues);
   const [errors, setErrors] = useState<Partial<Record<keyof UpdateFormValues, string>>>({});
   const [saving, setSaving] = useState(false);
@@ -56,8 +60,8 @@ export function UpdateFormDialog({ open, onOpenChange, caseId, stages, defaultSt
 
   function validate(): boolean {
     const next: Partial<Record<keyof UpdateFormValues, string>> = {};
-    if (!values.stageId) next.stageId = 'Stage is required.';
-    if (values.updateType === undefined) next.updateType = 'Update type is required.';
+    if (!values.stageId) next.stageId = t('required_stage');
+    if (values.updateType === undefined) next.updateType = t('required_update_type');
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -68,11 +72,11 @@ export function UpdateFormDialog({ open, onOpenChange, caseId, stages, defaultSt
     setSubmitError(undefined);
     try {
       const created = await Crb32_updatesesService.create(buildUpdateCreatePayload(caseId, values));
-      if (!created.success) throw new Error(created.error?.message ?? 'Failed to create update.');
+      if (!created.success) throw new Error(created.error?.message ?? t('error_generic'));
       onSaved();
       onOpenChange(false);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
+      setSubmitError(err instanceof Error ? err.message : t('error_generic'));
     } finally {
       setSaving(false);
     }
@@ -80,67 +84,80 @@ export function UpdateFormDialog({ open, onOpenChange, caseId, stages, defaultSt
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
-      <DialogSurface>
-        <DialogAccentBar />
+      <DialogSurface className={dialogStyles.surface}>
         <DialogBody>
-          <DialogTitle>New update</DialogTitle>
-          <DialogContent style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '4px' }}>
+          <DialogHeader
+            icon={<DocumentBulletListRegular fontSize={22} />}
+            title={t('new_update_title')}
+            subtitle={t('new_update_subtitle')}
+          />
+          <DialogContent className={dialogStyles.content}>
             {stages.length === 0 ? (
-              <span style={{ color: '#FB3748', fontSize: '13px' }}>
-                Add a stage to this case before recording updates.
-              </span>
+              <span className={dialogStyles.errorBanner}>{t('add_stage_first')}</span>
             ) : (
               <>
-                <StagePickerField
-                  label="Stage"
-                  required
-                  value={values.stageId}
-                  onChange={(v) => setValues((s) => ({ ...s, stageId: v }))}
-                  stages={stageOptions}
-                  error={errors.stageId}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <FormSection icon={<DocumentBulletListRegular fontSize={15} />} title={t('section_classification')}>
+                  <StagePickerField
+                    label={t('field_stage')}
+                    required
+                    value={values.stageId}
+                    onChange={(v) => setValues((s) => ({ ...s, stageId: v }))}
+                    stages={stageOptions}
+                    error={errors.stageId}
+                  />
                   <ChoiceField
-                    label="Update type"
+                    label={t('field_update_type')}
                     required
                     value={values.updateType}
                     onChange={(v) => setValues((s) => ({ ...s, updateType: v }))}
                     options={UPDATE_TYPE_OPTIONS}
                     error={errors.updateType}
                   />
-                  <DateField
-                    label="Date"
-                    value={values.date}
-                    onChange={(v) => setValues((s) => ({ ...s, date: v }))}
+                </FormSection>
+
+                <FormSection icon={<CalendarRegular fontSize={15} />} title={t('section_timing')}>
+                  <div className={dialogStyles.grid2}>
+                    <DateField label={t('field_date')} value={values.date} onChange={(v) => setValues((s) => ({ ...s, date: v }))} />
+                    <LockedField
+                      label={t('field_current_date')}
+                      hint={t('field_current_date_hint')}
+                      value={new Date().toLocaleString('en-GB')}
+                    />
+                  </div>
+                </FormSection>
+
+                <FormSection icon={<AttachRegular fontSize={15} />} title={t('field_documents_provided')}>
+                  <TextAreaField
+                    label={t('field_documents_provided')}
+                    value={values.documentsProvided}
+                    onChange={(v) => setValues((s) => ({ ...s, documentsProvided: v }))}
+                    rows={2}
                   />
-                </div>
-                <LockedField label="Current date" hint="Set automatically when the update is created." value={new Date().toLocaleString()} />
-                <TextAreaField
-                  label="Documents provided"
-                  value={values.documentsProvided}
-                  onChange={(v) => setValues((s) => ({ ...s, documentsProvided: v }))}
-                  rows={2}
-                />
-                <TextAreaField
-                  label="Description"
-                  value={values.description}
-                  onChange={(v) => setValues((s) => ({ ...s, description: v }))}
-                />
+                </FormSection>
+
+                <FormSection icon={<NotepadRegular fontSize={15} />} title={t('section_details')}>
+                  <TextAreaField
+                    label={t('field_description')}
+                    value={values.description}
+                    onChange={(v) => setValues((s) => ({ ...s, description: v }))}
+                  />
+                </FormSection>
               </>
             )}
-            {submitError && <span style={{ color: '#FB3748', fontSize: '13px' }}>{submitError}</span>}
+            {submitError && <span className={dialogStyles.errorBanner}>{submitError}</span>}
           </DialogContent>
           <DialogActions>
             <Button appearance="secondary" onClick={() => onOpenChange(false)} disabled={saving}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               appearance="primary"
               onClick={handleSubmit}
               disabled={saving || stages.length === 0}
               icon={saving ? <Spinner size="tiny" /> : undefined}
+              style={{ boxShadow: shadow.brassGlow }}
             >
-              Add update
+              {t('add_update')}
             </Button>
           </DialogActions>
         </DialogBody>

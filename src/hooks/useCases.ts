@@ -8,6 +8,7 @@ import type { AsyncStatus, CaseRecord } from '../types/domain';
 
 const SELECT = [
   'crb32_casesid',
+  'crb32_newcolumn',
   'crb32_from',
   'crb32_to',
   'crb32_description',

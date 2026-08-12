@@ -6,6 +6,7 @@
 
 export interface CaseRecord {
   id: string;
+  caseNumber?: string;
   claimant: string;
   defendant: string;
   responsibleId: string;
